@@ -1,3 +1,6 @@
+#ifndef __LOGS_UTIL_H__
+#define __LOGS_UTIL_H__
+
 /*
  * util.hpp 实用工具类的实现
  * 1. 获取系统时间
@@ -64,18 +67,23 @@ namespace cpplogs
                 size_t idx = 0;
                 while(idx < pathname.size())
                 {
-                    pos = pathname.find_first_of("/\\", idx);
-                    if(pos == std::string::npos)
+                    pos = pathname.find_first_of("/\\", idx);// 查找路径分隔符
+                    if(pos == std::string::npos)//没有找到更多分隔符
                     {
-                        mkdir(pathname.c_str(), 0777);
+                        mkdir(pathname.c_str(), 0777);//创建完整路径
                     }
                     else
                     {
-                        std::string parent_dir = pathname.substr(idx, pos - idx + 1);
-                        if(exists(parent_dir) == true)
+                        std::string parent_dir = pathname.substr(0, pos);//截取父目录
+                        if(exists(parent_dir) == true)//检查目录是否存在,存在则跳过
                         {
                             idx = pos + 1;
                             continue;
+                        }
+                        else
+                        {
+                            mkdir(parent_dir.c_str(), 0777);
+                            idx = pos + 1;
                         }
                     }
                 }
@@ -83,3 +91,5 @@ namespace cpplogs
         };
     }
 }
+
+#endif

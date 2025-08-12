@@ -1,3 +1,6 @@
+#ifndef __LOGS_LEVEL_H__
+#define __LOGS_LEVEL_H__
+
 /*
  * level.hpp 日志等级类
  * 1. 定义枚举类，枚举日志等级
@@ -12,20 +15,18 @@ namespace cpplogs
         enum class value
         {
             UNKNOW = 0,
-            OFF,
             DEBUG,
             INFO,
             WARN,
             ERROR,
-            FATAL
+            FATAL,
+            OFF
         };
-        const char* toString(cpplogs::LogLevel::value level)
+        static const char* toString(cpplogs::LogLevel::value level)
         {
             switch (level)
             {
-            case cpplogs::LogLevel::value::OFF:
-                return "OFF";
-                break;
+            
             case cpplogs::LogLevel::value::DEBUG:
                 return "DEBUG";
                 break;
@@ -35,8 +36,14 @@ namespace cpplogs
             case cpplogs::LogLevel::value::WARN:
                 return "WARN";
                 break;
+            case cpplogs::LogLevel::value::ERROR:
+                return "ERROR";
+                break;
             case cpplogs::LogLevel::value::FATAL:
                 return "FATAL";
+                break;
+            case cpplogs::LogLevel::value::OFF:
+                return "OFF";
                 break;
             default:
                 return "UNKNOW";
@@ -45,3 +52,5 @@ namespace cpplogs
         }
     };
 }
+
+#endif

@@ -1,7 +1,7 @@
 #ifndef __LOGS_FMT_H__
 #define __LOGS_FMT_H__
 
-/* 格式化子项类
+/* 格式化类
  * 从日志中取出指定的元素，追加到一块内存空间中
 */
 
@@ -9,6 +9,7 @@
 #include "message.hpp"
 #include <memory>
 #include <ctime>
+#include <vector>
 
 namespace cpplogs
 {
@@ -124,6 +125,41 @@ namespace cpplogs
         }
     private:
         std::string _str;
+    };
+
+    //格式化器
+    class Formmater
+    {
+    public:
+        /* 格式说明:
+         * %d 表示日期，其中包含子格式 {%H:%M:%S}
+         * %t 表示线程ID
+         * %c 表示日志器名称
+         * %f 表示源码文件名
+         * %l 表示源码行号
+         * %p 表示日志级别
+         * %T 表示制表符缩进
+         * %m 表示主体消息
+         * %n 表示换行
+         */
+        Formmater(const std::string pattern = "[%d{%H:%M:%S}][%t][%c][%f:%l][%p]%T%m%n")
+        : _pattern(pattern)
+        {}
+
+        //对msg进行格式化
+        std::string format(cpplogs::LogMsg& msg);
+        void format(std::ostream& out, cpplogs::LogMsg& msg);
+
+        //对格式化规则字符串进行解析
+        bool parsePattern();
+
+    private:
+        //根据不同的格式化字符创建不同的格式化子项对象
+        cpplogs::FormatItem::ptr createItem(const std::string& key, const std::string& val);
+
+    private:
+        std::string _pattern;//格式化规则字符串
+        std::vector<cpplogs::FormatItem::ptr> _items;
     };
 }
 

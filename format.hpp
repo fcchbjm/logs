@@ -10,6 +10,8 @@
 #include <memory>
 #include <ctime>
 #include <vector>
+#include <cassert>
+#include <sstream>
 
 namespace cpplogs
 {
@@ -144,18 +146,73 @@ namespace cpplogs
          */
         Formmater(const std::string pattern = "[%d{%H:%M:%S}][%t][%c][%f:%l][%p]%T%m%n")
         : _pattern(pattern)
-        {}
+        {
+            assert(parsePattern());
+        }
 
         //对msg进行格式化
-        std::string format(cpplogs::LogMsg& msg);
-        void format(std::ostream& out, cpplogs::LogMsg& msg);
+        std::string format(cpplogs::LogMsg& msg)
+        {
+            std::stringstream ss;
+            format(ss, msg);
+            return ss.str();
+        }
+        void format(std::ostream& out, cpplogs::LogMsg& msg)
+        {
+            for(auto& item : _items)
+            {
+                item->format(out, msg);
+            }
+        }
 
         //对格式化规则字符串进行解析
         bool parsePattern();
 
     private:
         //根据不同的格式化字符创建不同的格式化子项对象
-        cpplogs::FormatItem::ptr createItem(const std::string& key, const std::string& val);
+        cpplogs::FormatItem::ptr createItem(const std::string& key, const std::string& val)
+        {
+            if(key == "d")
+            {
+                return std::make_shared<cpplogs::TimeFormatItem>(val);
+            }
+            else if(key == "t")
+            {
+                return std::make_shared<cpplogs::ThreadFormatItem>();
+            }
+            else if(key == "c")
+            {
+                return std::make_shared<cpplogs::LoggerFormatItem>();
+            }
+            else if(key == "f")
+            {
+                return std::make_shared<cpplogs::FileFormatItem>();
+            }
+            else if(key == "l")
+            {
+                return std::make_shared<cpplogs::LineFormatItem>();
+            }
+            else if(key == "p")
+            {
+                return std::make_shared<cpplogs::LevelFormatItem>();
+            }
+            else if(key == "T")
+            {
+                return std::make_shared<cpplogs::TabFormatItem>();
+            }
+            else if(key == "m")
+            {
+                return std::make_shared<cpplogs::MsgFormatItem>();
+            }
+            else if(key == "n")
+            {
+                return std::make_shared<cpplogs::NewLineFormatItem>();
+            }
+            else
+            {
+                return std::make_shared<cpplogs::OtherFormatItem>(val);
+            }
+        }
 
     private:
         std::string _pattern;//格式化规则字符串

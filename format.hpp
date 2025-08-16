@@ -130,7 +130,7 @@ namespace cpplogs
     };
 
     //格式化器
-    class Formmater
+    class Formmatter
     {
     public:
         /* 格式说明:
@@ -144,7 +144,7 @@ namespace cpplogs
          * %m 表示主体消息
          * %n 表示换行
          */
-        Formmater(const std::string pattern = "[%d{%H:%M:%S}][%t][%c][%f:%l][%p]%T%m%n")
+        Formmatter(const std::string pattern = "[%d{%H:%M:%S}][%t][%c][%f:%l][%p]%T%m%n")
         : _pattern(pattern)
         {
             assert(parsePattern());
@@ -166,7 +166,67 @@ namespace cpplogs
         }
 
         //对格式化规则字符串进行解析
-        bool parsePattern();
+        bool parsePattern()
+        {
+            //对格式化规则字符串进行解析
+            std::vector<std::pair<std::string, std::string>> fmt_order;
+            size_t pos = 0;
+            while(pos < _pattern.size())
+            {
+                //处理原始字符串-是否为%，如果不是，则为原始字符
+                std::string key, val;
+                if(_pattern[pos] != '%')
+                {
+                    val.push_back(_pattern[pos++]);
+                    continue;
+                }
+                else if(pos + 1 < _pattern.size() && _pattern[pos + 1] == '%')//%% 为 '%'（类似转义字符）
+                {
+                    val.push_back('%');
+                    pos += 2;
+                    continue;
+                }
+                else//原始字符串处理完毕，开始处理格式化字符
+                {
+                    if(!val.empty())
+                    {
+                        fmt_order.push_back(std::make_pair("", val));
+                        val.clear();
+                    }
+                    pos += 1;//pos 指向格式化字符位置
+                    if(_pattern.size() == pos)
+                    {
+                        std::cerr << "cpplogs::Formmatter::parsePattern::未匹配的%." << std::endl;
+                        return false;
+                    }
+                    key = _pattern[pos];
+                    pos += 1;//pos 指向格式化字符下一位
+                    if(pos < _pattern.size() && _pattern[pos] == '{')//有子规则的情况
+                    {
+                        pos += 1;//pos 子规则起始位置
+                        while(pos < _pattern.size() && _pattern[pos] != '}')
+                        {
+                            val.push_back(_pattern[pos++]);
+                        }
+                        if(_pattern.size() == pos)//没有找到'}'
+                        {
+                            std::cerr << "cpplogs::Formmatter::parsePattern::子格式{}匹配出错." << std::endl;
+                            return false;
+                        }
+                        pos += 1;
+                    }
+                    fmt_order.push_back(std::make_pair("", val));
+                    key.clear();
+                    val.clear();
+                }
+            }
+            //根据解析得到的数据初始化格式化子项数组成员
+            for(auto& it : fmt_order)
+            {
+                _items.push_back(cpplogs::Formmatter::createItem(it.first, it.second));
+            }
+            return true;
+        }
 
     private:
         //根据不同的格式化字符创建不同的格式化子项对象

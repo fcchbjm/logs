@@ -123,9 +123,14 @@ namespace cpplogs
     //落地方向: 滚动文件(时间)
 
     //简单工厂模式
+    template<typename SinkType, typename ...Args>
     class SinkFactory
     {
-
+    public:
+        static cpplogs::LogSink::ptr create(Args&& ...args)
+        {
+            return std::make_shared<SinkType>(std::forward<Args>(args)...);
+        }
     };
 }
 

@@ -20,14 +20,14 @@ namespace cpplogs
     {
     public:
         using ptr = std::shared_ptr<FormatItem>;
-        virtual void format(std::ostream& out, cpplogs::LogMsg& msg) = 0;
+        virtual void format(std::ostream& out, const cpplogs::LogMsg& msg) = 0;
     };
 
     //派生格式化子类 -- 消息，等级，时间，文件名，行号，线程ID，日志器名，制表符，换行，其它
     class MsgFormatItem : public FormatItem
     {
     public:
-        void format(std::ostream& out, cpplogs::LogMsg& msg) override
+        void format(std::ostream& out, const cpplogs::LogMsg& msg) override
         {
             out << msg._payload;
         }
@@ -36,7 +36,7 @@ namespace cpplogs
     class LevelFormatItem : public FormatItem
     {
     public:
-        void format(std::ostream& out, cpplogs::LogMsg& msg) override
+        void format(std::ostream& out, const cpplogs::LogMsg& msg) override
         {
             out << cpplogs::LogLevel::toString(msg._level);
         }
@@ -48,7 +48,7 @@ namespace cpplogs
         TimeFormatItem(const std::string& fmt = "%H:%M:%S")
         : _time_fmt(fmt)
         {}
-        void format(std::ostream& out, cpplogs::LogMsg& msg) override
+        void format(std::ostream& out, const cpplogs::LogMsg& msg) override
         {
             struct tm t;
             localtime_r(&(msg._ctime), &t);
@@ -64,7 +64,7 @@ namespace cpplogs
     class FileFormatItem : public FormatItem
     {
     public:
-        void format(std::ostream& out, cpplogs::LogMsg& msg) override
+        void format(std::ostream& out, const cpplogs::LogMsg& msg) override
         {
             out << msg._file;
         }
@@ -73,7 +73,7 @@ namespace cpplogs
     class LineFormatItem : public FormatItem
     {
     public:
-        void format(std::ostream& out, cpplogs::LogMsg& msg) override
+        void format(std::ostream& out, const cpplogs::LogMsg& msg) override
         {
             out << msg._line;
         }
@@ -82,7 +82,7 @@ namespace cpplogs
     class ThreadFormatItem : public FormatItem
     {
     public:
-        void format(std::ostream& out, cpplogs::LogMsg& msg) override
+        void format(std::ostream& out, const cpplogs::LogMsg& msg) override
         {
             out << msg._tid;
         }
@@ -91,7 +91,7 @@ namespace cpplogs
     class LoggerFormatItem : public FormatItem
     {
     public:
-        void format(std::ostream& out, cpplogs::LogMsg& msg) override
+        void format(std::ostream& out, const cpplogs::LogMsg& msg) override
         {
             out << msg._logger;
         }
@@ -100,7 +100,7 @@ namespace cpplogs
     class TabFormatItem : public FormatItem
     {
     public:
-        void format(std::ostream& out, cpplogs::LogMsg& msg) override
+        void format(std::ostream& out, const cpplogs::LogMsg& msg) override
         {
             out << "\t";
         }
@@ -109,7 +109,7 @@ namespace cpplogs
     class NewLineFormatItem : public FormatItem
     {
     public:
-        void format(std::ostream& out, cpplogs::LogMsg& msg) override
+        void format(std::ostream& out, const cpplogs::LogMsg& msg) override
         {
             out << "\n";
         }
@@ -121,7 +121,7 @@ namespace cpplogs
         OtherFormatItem(const std::string& str)
         :_str(str)
         {}
-        void format(std::ostream& out, cpplogs::LogMsg& msg) override
+        void format(std::ostream& out, const cpplogs::LogMsg& msg) override
         {
             out << _str;
         }
@@ -151,13 +151,13 @@ namespace cpplogs
         }
 
         //对msg进行格式化
-        std::string format(cpplogs::LogMsg& msg)
+        std::string format(const cpplogs::LogMsg& msg)
         {
             std::stringstream ss;
             format(ss, msg);
             return ss.str();
         }
-        void format(std::ostream& out, cpplogs::LogMsg& msg)
+        void format(std::ostream& out, const cpplogs::LogMsg& msg)
         {
             for(auto& item : _items)
             {
@@ -165,16 +165,17 @@ namespace cpplogs
             }
         }
 
+    private:
         //对格式化规则字符串进行解析
         bool parsePattern()
         {
             //对格式化规则字符串进行解析
             std::vector<std::pair<std::string, std::string>> fmt_order;
             size_t pos = 0;
+            std::string key, val;
             while(pos < _pattern.size())
             {
                 //处理原始字符串-是否为%，如果不是，则为原始字符
-                std::string key, val;
                 if(_pattern[pos] != '%')
                 {
                     val.push_back(_pattern[pos++]);
@@ -196,7 +197,7 @@ namespace cpplogs
                     pos += 1;//pos 指向格式化字符位置
                     if(_pattern.size() == pos)
                     {
-                        std::cerr << "cpplogs::Formmatter::parsePattern::未匹配的%." << std::endl;
+                        std::cerr << "[ERROR]cpplogs::Formmatter::parsePattern::未匹配的%." << std::endl;
                         return false;
                     }
                     key = _pattern[pos];
@@ -210,15 +211,20 @@ namespace cpplogs
                         }
                         if(_pattern.size() == pos)//没有找到'}'
                         {
-                            std::cerr << "cpplogs::Formmatter::parsePattern::子格式{}匹配出错." << std::endl;
+                            std::cerr << "[ERROR]cpplogs::Formmatter::parsePattern::子格式{}匹配出错." << std::endl;
                             return false;
                         }
                         pos += 1;
                     }
-                    fmt_order.push_back(std::make_pair("", val));
+                    fmt_order.push_back(std::make_pair(key, val));
                     key.clear();
                     val.clear();
                 }
+            }
+            // 处理循环结束后剩余的val（原始字符串）
+            if (!val.empty()) 
+            {
+                fmt_order.push_back(std::make_pair("", val));
             }
             //根据解析得到的数据初始化格式化子项数组成员
             for(auto& it : fmt_order)
@@ -228,7 +234,6 @@ namespace cpplogs
             return true;
         }
 
-    private:
         //根据不同的格式化字符创建不同的格式化子项对象
         cpplogs::FormatItem::ptr createItem(const std::string& key, const std::string& val)
         {
@@ -270,6 +275,10 @@ namespace cpplogs
             }
             else
             {
+                if(!key.empty())
+                {
+                    std::cerr << "[WARN]cpplogs::Formmatter::createItem::没有对应的格式化字符: %" << key << "." << std::endl;
+                }
                 return std::make_shared<cpplogs::OtherFormatItem>(val);
             }
         }

@@ -67,6 +67,7 @@ namespace cpplogs
         : _basename(basename)
         , _max_fsize(max_size)
         , _cur_fsize(0)
+        , _name_count(0)
         {
             std::string pathname = createNewFile();
             //创建日志文件所在的目录
@@ -83,6 +84,7 @@ namespace cpplogs
             {
                 std::string pathname = createNewFile();
                 _ofs.close();//关闭原来打开的文件
+                _cur_fsize = 0;
                 _ofs.open(pathname, std::ios::binary | std::ios::app);//写入和追加
                 assert(_ofs.is_open());
             }
@@ -104,12 +106,13 @@ namespace cpplogs
                 filename << _basename;
                 filename << "-";
             }
-            filename << st.tm_year;
-            filename << st.tm_mon;
+            filename << st.tm_year + 1900;
+            filename << st.tm_mon + 1;
             filename << st.tm_mday;
             filename << st.tm_hour;
             filename << st.tm_min;
             filename << st.tm_sec;
+            filename << ++_name_count;
             filename << ".log";
             return filename.str();
         }
@@ -119,14 +122,15 @@ namespace cpplogs
         std::ofstream _ofs;
         size_t _max_fsize;//记录最大大小，当前文件写入大小超过了这个大小就要切换文件
         size_t _cur_fsize;//记录当前文件已经写入的数据大小
+        size_t _name_count;//名称计数器
     };
     //落地方向: 滚动文件(时间)
 
     //简单工厂模式
-    template<typename SinkType, typename ...Args>
     class SinkFactory
     {
     public:
+        template<typename SinkType, typename ...Args>
         static cpplogs::LogSink::ptr create(Args&& ...args)
         {
             return std::make_shared<SinkType>(std::forward<Args>(args)...);

@@ -133,6 +133,8 @@ namespace cpplogs
     class Formmatter
     {
     public:
+        using ptr = std::shared_ptr<cpplogs::Formmatter>;
+
         /* 格式说明:
          * %d 表示日期，其中包含子格式 {%H:%M:%S}
          * %t 表示线程ID

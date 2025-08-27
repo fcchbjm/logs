@@ -137,29 +137,20 @@ namespace cpplogs
         RollSinkByTime(const std::string& basename, cpplogs::TimeGap gap_type)
         : _basename(basename)
         {
-            switch (gap_type)
-            {
-            case cpplogs::TimeGap::GAP_SECOND:
-                _gap_size = 1;
-                break;
-            
-            case cpplogs::TimeGap::GAP_MINUTE:
-                _gap_size = 60;
-                break;
-            
-            case cpplogs::TimeGap::GAP_HOUR:
-                _gap_size = 3600;
-                break;
+            TimeGapToSeconds(gap_type);
+            _cur_gap = _gap_size == 1 ? cpplogs::util::Date::getTime() : cpplogs::util::Date::getTime() % _gap_size;//当前是第几个时间段
 
-            case cpplogs::TimeGap::GAP_DAY:
-                _gap_size = 24 * 3600;
-                break;
-            
-            default:
-                break;
-            }
+            std::string pathname = createNewFile();
+            cpplogs::util::File::createDirectory(cpplogs::util::File::path(pathname));
+            _ofs.open(pathname, std::ios::binary | std::ios::app);//写入和追加
+            assert(_ofs.is_open());
+        }
 
-            _cur_gap = cpplogs::util::Date::getTime()  % _gap_size;//当前是第几个时间段
+        RollSinkByTime(const std::string& basename, size_t gap_seconds)
+        : _basename(basename)
+        , _gap_size(gap_seconds)
+        {
+            _cur_gap = _gap_size == 1 ? cpplogs::util::Date::getTime() : cpplogs::util::Date::getTime() % _gap_size;//当前是第几个时间段
 
             std::string pathname = createNewFile();
             cpplogs::util::File::createDirectory(cpplogs::util::File::path(pathname));
@@ -171,10 +162,11 @@ namespace cpplogs
         void log(const char* data, size_t len)
         {
             time_t cur = cpplogs::util::Date::getTime();
-            if(cur % _gap_size > _cur_gap)
+            if(cur / _gap_size != _cur_gap)
             {
                 std::string pathname = createNewFile();
                 _ofs.close();//关闭原来打开的文件
+                _cur_gap = cur / _gap_size;
                 _ofs.open(pathname, std::ios::binary | std::ios::app);//写入和追加
                 assert(_ofs.is_open());
             }
@@ -199,6 +191,28 @@ namespace cpplogs
             filename << st.tm_sec;
             filename << ".log";
             return filename.str();
+        }
+
+        void TimeGapToSeconds(cpplogs::TimeGap gap_type)
+        {
+            switch (gap_type)
+            {
+            case cpplogs::TimeGap::GAP_SECOND:
+                _gap_size = 1;
+                break;
+            
+            case cpplogs::TimeGap::GAP_MINUTE:
+                _gap_size = 60;
+                break;
+            
+            case cpplogs::TimeGap::GAP_HOUR:
+                _gap_size = 3600;
+                break;
+
+            case cpplogs::TimeGap::GAP_DAY:
+                _gap_size = 24 * 3600;
+                break;
+            }
         }
     private:
         //通过基础文件名+扩展文件名（以时间生成）组成一个实际的当前输出文件名
